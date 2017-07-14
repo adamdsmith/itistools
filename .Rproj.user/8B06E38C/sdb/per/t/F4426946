@@ -1,0 +1,20 @@
+{
+    "collab_server" : "",
+    "contents" : "Package: itistools\nType: Package\nTitle: Retrieve specific taxon information from ITIS based on scientific name query\nVersion: 0.1\nDate: 2017-07-12\nAuthors@R: c(person(\"Adam\", \"Smith\", email = \"adam_d_smith@fws.gov\", role = c(\"aut\", \"cre\")))\nMaintainer: Adam D. Smith <adam_d_smith@fws.gov>\nDescription: This package consists primarily of a single function that we regularly use \n    to retrieve information from ITIS, plus some non-exported utility functions.\nDepends:\n    R (>= 3.3)\nImports:\n    dplyr (>= 0.5.0),\n    solrium (>= 0.4)\nLicense: CC0\nCopyright: This software is in the public domain because it contains materials\n    that originally came from the United States Fish & Wildlife Service, an agency\n    of the United States Department of Interior. For more information, see the\n    official US DOI copyright policy at https://www.doi.gov/copyright.  Note that the\n    use of the USFWS logo is restricted to official publications:\n    https://www.fws.gov/help/policies.html\nLazyData: TRUE\nURL: https://github.com/adamdsmith/itistools\nBugReports: https://github.com/adamdsmith/itistools/issues\nRoxygenNote: 6.0.1\n",
+    "created" : 1500049318791.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "624025888",
+    "id" : "F4426946",
+    "lastKnownWriteTime" : 1500053601,
+    "last_content_update" : 1500053601499,
+    "path" : "~/FWS_Projects/R_packages/itistools/DESCRIPTION",
+    "project_path" : "DESCRIPTION",
+    "properties" : {
+    },
+    "relative_order" : 6,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "dcf"
+}

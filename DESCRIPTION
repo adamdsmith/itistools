@@ -1,0 +1,25 @@
+Package: itistools
+Type: Package
+Title: Retrieve specific taxon information from ITIS based on scientific name query
+Version: 0.1
+Date: 2017-07-12
+Authors@R: c(person("Adam", "Smith", email = "adam_d_smith@fws.gov", role = c("aut", "cre")))
+Maintainer: Adam D. Smith <adam_d_smith@fws.gov>
+Description: This package consists primarily of a single function that we regularly use 
+    to retrieve information from ITIS, plus some non-exported utility functions.
+Depends:
+    R (>= 3.3)
+Imports:
+    dplyr (>= 0.5.0),
+    solrium (>= 0.4)
+License: CC0
+Copyright: This software is in the public domain because it contains materials
+    that originally came from the United States Fish & Wildlife Service, an agency
+    of the United States Department of Interior. For more information, see the
+    official US DOI copyright policy at https://www.doi.gov/copyright.  Note that the
+    use of the USFWS logo is restricted to official publications:
+    https://www.fws.gov/help/policies.html
+LazyData: TRUE
+URL: https://github.com/adamdsmith/itistools
+BugReports: https://github.com/adamdsmith/itistools/issues
+RoxygenNote: 6.0.1

@@ -1,0 +1,16 @@
+language: r
+sudo: required
+warnings_are_errors: false
+cran: http://cran.rstudio.com
+dist: trusty
+cache: packages
+
+r:
+  - release
+  - devel
+  - oldrel
+
+notifications:
+  email:
+    on_success: change
+    on_failure: change

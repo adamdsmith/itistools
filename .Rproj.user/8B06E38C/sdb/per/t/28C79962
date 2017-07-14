@@ -1,0 +1,21 @@
+{
+    "collab_server" : "",
+    "contents" : "#' Options for word capitalization\n#'\n#' @param string string of words to capitalize\n#' @param words whether to capitalize \\code{all} words (title case; default) or\n#'  only the \\code{first}. \\code{first} DOES NOT preserve capitalization.\n#'\n#' @return string of equal length to \\code{string} with capitalization applied\n#' @export\n#' @examples\n#' # Title case\n#' Cap(\"put me in title case please\")\n#'\n#' # First word only\n#' Cap(\"only the first word this time.\", \"first\")\n#'\n#' # Existing capitalization is NOT preserved\n#' Cap(\"Since Oklahoma is not the first word, it will not be capitalized.\", \"first\")\n#'\n#' # Vectorization is accommodated\n#' Cap(c(\"title case please\", \"and me too\"))\n#'\n#' # Handles missing values\n#' Cap(c(\"title case please\", NA_character_, \"and me too\"))\n\nCap <- function(string, words = c(\"all\", \"first\")) {\n  words <- match.arg(words)\n  isna <- is.na(string)\n  string <- tolower(string)\n  if (identical(words, \"all\")) {\n    s <- strsplit(string, \" \")\n    s <- sapply(s, function(i) {\n      paste(toupper(substring(i, 1,1)), substring(i, 2), sep=\"\", collapse=\" \")\n    })\n  } else {\n    s <- paste0(toupper(substr(string, 1, 1)),\n                substr(string, 2, nchar(string)))\n  }\n  s[isna] <- NA_character_\n  s\n}\n\n#' Check for various forms of missing strings beyond NA and \"\"\n#'\n#' @param string string to evaluate for missing content. Missing content is defined\n#'  as NA_character_, empty strings, and strings comprised entirely of white space\n#'\n#' @return logical of equal length to \\code{string} indicating whether content is\n#'  missing\n\nis_missing <- function(string) {\n  is.na(string) | nchar(string) == 0 | grepl(\"^ +$\", string)\n}\n\n#' Extract vernacular\n#'\n#' @param string string returned in 'vernacular' field of\n#'  \\code{\\link[solrium]{solr_search}} to \\url{http://services.itis.gov/}. It\n#'  is a very specific format...\n#'\n#' @return string of equal length to \\code{string} returning the first vernacular\n#'  English name, in all lower case\n\nget_vernac <- function(string) {\n  string <- sapply(string, function(i) {\n    eng <- grepl(\"\\\\$English\\\\$\", i)\n    dol_signs <- gregexpr(\"\\\\$\", i)[[1]]\n    if (eng) {\n      end <- regexpr(\"\\\\$English\\\\$\", i)[[1]] - 1\n      strt <- dol_signs[which(dol_signs == regexpr(\"\\\\$English\\\\$\", i)[[1]]) - 1] + 1\n      string <- substr(i, strt, end)\n    } else {\n      string <- substr(i, 2, dol_signs[2] - 1)\n    }\n  })\n  tolower(unname(string))\n}\n\n#' Extract taxon rank\n#'\n#' @param string string returned in 'hierarchySoFarWRanks' field of\n#'  \\code{\\link[solrium]{solr_search}} to \\url{http://services.itis.gov/}. It\n#'  is a very specific format...\n#'\n#' @return string of equal length to \\code{string} returning the lowest taxonomic\n#'  rank associated with that taxon\n\nretrieve_rank <- function(string) {\n  out <- sapply(string, function(i) {\n    tmp <- strsplit(i, \"$\", fixed = TRUE)[[1]]\n    tmp <- tmp[length(tmp)]\n    sub(\":.*$\", \"\", tmp)\n  })\n  unname(out)\n}\n\n#' Extract valid scientific name, if present rank\n#'\n#' @param string string returned in 'hierarchySoFarWRanks' field of\n#'  \\code{\\link[solrium]{solr_search}} to \\url{http://services.itis.gov/}. It\n#'  is a very specific format...\n#'\n#' @return string of equal length to \\code{string} returning the valid ITIS\n#'  scientific name, if present\n\nretrieve_sci_name <- function(string) {\n  ifelse(grepl(\"\\\\$Species:\", string),\n       sub(\".*Species: *(.*?) *\\\\$.*$\", \"\\\\1\", string),\n       NA_character_)\n}\n",
+    "created" : 1500049088494.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "4150153957",
+    "id" : "28C79962",
+    "lastKnownWriteTime" : 1500053601,
+    "last_content_update" : 1500053601382,
+    "path" : "~/FWS_Projects/R_packages/itistools/R/utils.R",
+    "project_path" : "R/utils.R",
+    "properties" : {
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 1,
+    "source_on_save" : true,
+    "source_window" : "",
+    "type" : "r_source"
+}
