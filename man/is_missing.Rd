@@ -17,3 +17,6 @@ logical of equal length to \code{string} indicating whether content is
 \description{
 Check for various forms of missing strings beyond NA and ""
 }
+\examples{
+is_missing(c("", "ok", "  ", "       ", NA_character_, "ok, too"))
+}

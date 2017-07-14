@@ -46,6 +46,9 @@ Cap <- function(string, words = c("all", "first")) {
 #'
 #' @return logical of equal length to \code{string} indicating whether content is
 #'  missing
+#' @export
+#' @examples
+#' is_missing(c("", "ok", "  ", "       ", NA_character_, "ok, too"))
 
 is_missing <- function(string) {
   is.na(string) | nchar(string) == 0 | grepl("^ +$", string)

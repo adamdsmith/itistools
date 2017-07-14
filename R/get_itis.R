@@ -5,7 +5,8 @@
 #' @return tibble containing the queried scientific name, the valid ITIS scientific
 #'  name if the taxon is of 'Species' rank, the ITIS common name (if present), and
 #'  the ITIS taxon rank of the queried scientific name
-
+#'
+#' @export
 #' @examples
 #' \dontrun{
 #' sn <- c("Thryothorus ludovicianus", "Cardinalis cardinalis", "Bidens alba",
