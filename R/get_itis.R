@@ -28,7 +28,7 @@ get_itis <- function(scientific_names) {
     tmp_sn <- scientific_names[which(group_sn == i)]
     sci_query <- paste0('nameWOInd:(', paste(shQuote(tmp_sn), collapse = " "), ')')
     invisible(solrium::solr_connect("http://services.itis.gov/", verbose = FALSE))
-    itis <- solrium::solr_search(q = sci_query,
+    tmp_sn <- solrium::solr_search(q = sci_query,
                                  fl = c('tsn', 'nameWOInd', 'usage', 'rank', 'acceptedTSN',
                                         'vernacular', 'hierarchySoFarWRanks'),
                                  rows = length(tmp_sn) + 20) %>% # allow room for multiple returned matches
@@ -58,8 +58,9 @@ get_itis <- function(scientific_names) {
   # Retrieve common names of changed scientific names, if missing...
   needs_com_name <- itis %>%
     filter(!identical(sci_name, valid_sci_name),
+           !is.na(valid_sci_name),
            is.na(itis_com_name)) %>%
-    pull(valid_sci_name)
+    pull(valid_sci_name) %>% unique()
 
   # Again splitting, if necessary, to keep API happy
   if (length(needs_com_name) > 100) {
@@ -70,16 +71,22 @@ get_itis <- function(scientific_names) {
     tmp_cn <- needs_com_name[which(group_cn == i)]
     sci_query <- paste0('nameWOInd:(', paste(shQuote(tmp_cn), collapse = " "), ')')
     invisible(solrium::solr_connect("http://services.itis.gov/", verbose = FALSE))
-    itis <- solrium::solr_search(q = sci_query,
+    tmp_cn <- solrium::solr_search(q = sci_query,
                                  fl = c('nameWOInd', 'vernacular'),
                                  rows = length(tmp_cn) + 20) %>% # allow room for multiple returned matches
       group_by(nameWOInd) %>%
       slice(1) %>% ungroup() %>%
       mutate(itis_com_name = Cap(get_vernac(vernacular))) %>%
-      select(valid_sci_name = nameWOInd, itis_com_name)
+      select(valid_sci_name = nameWOInd, itis_com_name) %>%
+      filter(!is.na(itis_com_name))
   })
   fix_cn <- bind_rows(fix_cn)
-  itis$itis_com_name[match(fix_cn$valid_sci_name, itis$valid_sci_name)] <- fix_cn$itis_com_name
+  keep <- anti_join(itis, fix_cn, by = "valid_sci_name")
+  update <- semi_join(itis, fix_cn, by = "valid_sci_name") %>%
+    left_join(fix_cn, by = "valid_sci_name") %>%
+    mutate(itis_com_name = itis_com_name.y) %>%
+    select(sci_name, valid_sci_name, itis_com_name, itis_taxon_rank)
+  itis <- bind_rows(keep, update)
 
   # If necessary, add in unmatched records
   if (length(unmatched) > 0)
