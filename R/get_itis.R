@@ -73,7 +73,13 @@ get_itis <- function(scientific_names) {
     invisible(solrium::solr_connect("http://services.itis.gov/", verbose = FALSE))
     tmp_cn <- solrium::solr_search(q = sci_query,
                                  fl = c('nameWOInd', 'vernacular'),
-                                 rows = length(tmp_cn) + 20) %>% # allow room for multiple returned matches
+                                 # allow room for multiple returned matches
+                                 rows = length(tmp_cn) + 20)
+
+    # Add *missing* vernacular if not present..
+    if (!("vernacular" %in% colnames(tmp_cn))) tmp_cn$vernacular <- NA_character_
+
+    tmp_cn <- tmp_cn %>%
       group_by(nameWOInd) %>%
       slice(1) %>% ungroup() %>%
       mutate(itis_com_name = Cap(get_vernac(vernacular))) %>%
