@@ -31,76 +31,84 @@ get_itis <- function(scientific_names) {
     tmp_sn <- solrium::solr_search(q = sci_query,
                                  fl = c('tsn', 'nameWOInd', 'usage', 'rank', 'acceptedTSN',
                                         'vernacular', 'hierarchySoFarWRanks'),
-                                 rows = length(tmp_sn) + 20) %>% # allow room for multiple returned matches
-      group_by(nameWOInd) %>%
-      # If multiple matches, preferentially keep valid/accepted, if available, or first record
-      slice(max(which(usage %in% c("accepted", "valid")), 1)) %>%
-      ungroup()
+                                 rows = length(tmp_sn) + 20) # allow room for multiple returned matches
+    if (nrow(tmp_sn) > 0) {
+      tmp_sn <- tmp_sn %>%
+        group_by(nameWOInd) %>%
+        # If multiple matches, preferentially keep valid/accepted, if available, or first record
+        slice(max(which(usage %in% c("accepted", "valid")), 1)) %>%
+        ungroup()
+    } else tibble()
   })
+
   itis <- bind_rows(itis)
 
-  # Save unmatched scientific names to add in later
-  unmatched <- scientific_names[which(!(scientific_names %in% itis$nameWOInd))]
+  if (nrow(itis) > 0) {
 
-  # Add *missing* vernacular if not present..
-  if (!("vernacular" %in% colnames(itis))) itis$vernacular <- NA_character_
+    # Save unmatched scientific names to add in later
+    unmatched <- scientific_names[which(!(scientific_names %in% itis$nameWOInd))]
 
-  # Simplify ITIS data.frame
-  itis <- mutate(itis,
-                 # Accepted scientific name
-                 valid_sci_name = retrieve_sci_name(hierarchySoFarWRanks),
-                 # Return most common common name in ITIS...and capitalize it
-                 itis_com_name = Cap(get_vernac(vernacular)),
-                 # Get rank if no longer species after correcting TSN
-                 itis_taxon_rank = retrieve_rank(hierarchySoFarWRanks)) %>%
-    select(sci_name = nameWOInd, valid_sci_name, itis_com_name, itis_taxon_rank = rank)
+    # Add *missing* vernacular if not present..
+    if (!("vernacular" %in% colnames(itis))) itis$vernacular <- NA_character_
 
-  # Retrieve common names of changed scientific names, if missing...
-  needs_com_name <- itis %>%
-    filter(!identical(sci_name, valid_sci_name),
-           !is.na(valid_sci_name),
-           is.na(itis_com_name)) %>%
-    pull(valid_sci_name) %>% unique()
+    # Simplify ITIS data.frame
+    itis <- mutate(itis,
+                   # Accepted scientific name
+                   valid_sci_name = retrieve_sci_name(hierarchySoFarWRanks),
+                   # Return most common common name in ITIS...and capitalize it
+                   itis_com_name = Cap(get_vernac(vernacular)),
+                   # Get rank if no longer species after correcting TSN
+                   itis_taxon_rank = retrieve_rank(hierarchySoFarWRanks)) %>%
+      select(sci_name = nameWOInd, valid_sci_name, itis_com_name, itis_taxon_rank = rank)
 
-  # Again splitting, if necessary, to keep API happy
-  if (length(needs_com_name) > 100) {
-    group_cn <- cut(seq_along(needs_com_name), ceiling(length(needs_com_name)/100), labels = FALSE)
-  } else group_cn <- rep(1, length(needs_com_name))
+    # Retrieve common names of changed scientific names, if missing...
+    needs_com_name <- itis %>%
+      filter(!identical(sci_name, valid_sci_name),
+             !is.na(valid_sci_name),
+             is.na(itis_com_name)) %>%
+      pull(valid_sci_name) %>% unique()
 
-  if (length(group_cn) > 0) {
-    fix_cn <- lapply(unique(group_cn), function(i) {
-      tmp_cn <- needs_com_name[which(group_cn == i)]
-      sci_query <- paste0('nameWOInd:(', paste(shQuote(tmp_cn), collapse = " "), ')')
-      invisible(solrium::solr_connect("http://services.itis.gov/", verbose = FALSE))
-      tmp_cn <- solrium::solr_search(q = sci_query,
-                                     fl = c('nameWOInd', 'vernacular'),
-                                     # allow room for multiple returned matches
-                                     rows = length(tmp_cn) + 20)
+    # Again splitting, if necessary, to keep API happy
+    if (length(needs_com_name) > 100) {
+      group_cn <- cut(seq_along(needs_com_name), ceiling(length(needs_com_name)/100), labels = FALSE)
+    } else group_cn <- rep(1, length(needs_com_name))
 
-      # Add *missing* vernacular if not present..
-      if (!("vernacular" %in% colnames(tmp_cn))) tmp_cn$vernacular <- NA_character_
+    if (length(group_cn) > 0) {
+      fix_cn <- lapply(unique(group_cn), function(i) {
+        tmp_cn <- needs_com_name[which(group_cn == i)]
+        sci_query <- paste0('nameWOInd:(', paste(shQuote(tmp_cn), collapse = " "), ')')
+        invisible(solrium::solr_connect("http://services.itis.gov/", verbose = FALSE))
+        tmp_cn <- solrium::solr_search(q = sci_query,
+                                       fl = c('nameWOInd', 'vernacular'),
+                                       # allow room for multiple returned matches
+                                       rows = length(tmp_cn) + 20)
 
-      tmp_cn <- tmp_cn %>%
-        group_by(nameWOInd) %>%
-        slice(1) %>% ungroup() %>%
-        mutate(itis_com_name = Cap(get_vernac(vernacular))) %>%
-        select(valid_sci_name = nameWOInd, itis_com_name) %>%
-        filter(!is.na(itis_com_name))
-    })
-    fix_cn <- bind_rows(fix_cn)
-    keep <- anti_join(itis, fix_cn, by = "valid_sci_name")
-    update <- semi_join(itis, fix_cn, by = "valid_sci_name") %>%
-      left_join(fix_cn, by = "valid_sci_name") %>%
-      mutate(itis_com_name = itis_com_name.y) %>%
-      select(sci_name, valid_sci_name, itis_com_name, itis_taxon_rank)
-    itis <- bind_rows(keep, update)
-  }
+        # Add *missing* vernacular if not present..
+        if (!("vernacular" %in% colnames(tmp_cn))) tmp_cn$vernacular <- NA_character_
 
-  # If necessary, add in unmatched records
-  if (length(unmatched) > 0)
-    itis <- bind_rows(itis, data.frame(sci_name = unmatched,
-                                       stringsAsFactors = FALSE))
+        tmp_cn <- tmp_cn %>%
+          group_by(nameWOInd) %>%
+          slice(1) %>% ungroup() %>%
+          mutate(itis_com_name = Cap(get_vernac(vernacular))) %>%
+          select(valid_sci_name = nameWOInd, itis_com_name) %>%
+          filter(!is.na(itis_com_name))
+      })
+      fix_cn <- bind_rows(fix_cn)
+      keep <- anti_join(itis, fix_cn, by = "valid_sci_name")
+      update <- semi_join(itis, fix_cn, by = "valid_sci_name") %>%
+        left_join(fix_cn, by = "valid_sci_name") %>%
+        mutate(itis_com_name = itis_com_name.y) %>%
+        select(sci_name, valid_sci_name, itis_com_name, itis_taxon_rank)
+      itis <- bind_rows(keep, update)
+    }
 
-  itis
+    # If necessary, add in unmatched records
+    if (length(unmatched) > 0)
+      itis <- bind_rows(itis, data.frame(sci_name = unmatched,
+                                         stringsAsFactors = FALSE))
+
+    itis
+
+  } else tibble()
 
 }
