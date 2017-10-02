@@ -67,7 +67,7 @@ get_itis <- function(scientific_names, timeout = 20L) {
     unmatched <- scientific_names[which(!(scientific_names %in% itis$nameWOInd))]
 
     # Ensure vernacular column is present..
-    itis <- bind_rows(itis, data.frame(vernacular = NA_character_,
+    itis <- bind_rows(itis, data.frame(vernacular = character(0),
                                        stringsAsFactors = FALSE))
 
     # Simplify ITIS data.frame
@@ -119,7 +119,7 @@ get_itis <- function(scientific_names, timeout = 20L) {
                                        rows = length(tmp_cn) + 20,
                                        callopts = httr::timeout(timeout)) %>%
           # Ensure vernacular column is present..
-          bind_rows(data.frame(vernacular = NA_character_,
+          bind_rows(data.frame(vernacular = character(0),
                                stringsAsFactors = FALSE)) %>%
           group_by(.data$nameWOInd) %>%
           slice(1) %>% ungroup() %>%
