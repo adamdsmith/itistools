@@ -110,3 +110,19 @@ retrieve_sci_name <- function(string) {
        sub(".*Species: *(.*?) *\\$.*$", "\\1", string),
        NA_character_)
 }
+
+#' Extract taxonomic class
+#'
+#' @param string string returned in 'hierarchySoFarWRanks' field of
+#'  \code{\link[solrium]{solr_search}} to \url{http://services.itis.gov/}. It
+#'  is a very specific format...
+#'
+#' @return string of equal length to \code{string} returning the ITIS
+#'  taxonomic class, if present
+
+retrieve_class <- function(string) {
+  ifelse(grepl("\\$Class:", string),
+         sub("(^.*Class:)([A-z]*)(\\$.*$)", "\\2", string),
+         NA_character_)
+}
+
