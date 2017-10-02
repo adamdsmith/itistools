@@ -135,9 +135,10 @@ get_itis <- function(scientific_names, timeout = 20L) {
       keep <- anti_join(itis, fix_cn, by = "valid_sci_name")
       update <- semi_join(itis, fix_cn, by = "valid_sci_name") %>%
         left_join(fix_cn, by = "valid_sci_name") %>%
-        mutate(itis_com_name = .data$itis_com_name.y) %>%
         select(.data$sci_name, .data$valid_sci_name,
-               .data$itis_com_name, .data$class, .data$itis_taxon_rank)
+               itis_com_name = .data$itis_com_name.y,
+               class = .data$class.y,
+               .data$itis_taxon_rank)
       itis <- bind_rows(keep, update)
     }
 
