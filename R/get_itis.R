@@ -34,9 +34,9 @@ get_itis <- function(scientific_names) {
                                  rows = length(tmp_sn) + 20) # allow room for multiple returned matches
     if (nrow(tmp_sn) > 0) {
       tmp_sn <- tmp_sn %>%
-        group_by(nameWOInd) %>%
+        group_by(.data$nameWOInd) %>%
         # If multiple matches, preferentially keep valid/accepted, if available, or first record
-        slice(max(which(usage %in% c("accepted", "valid")), 1)) %>%
+        slice(max(which(.data$usage %in% c("accepted", "valid")), 1)) %>%
         ungroup()
     } else tibble()
   })
@@ -53,20 +53,23 @@ get_itis <- function(scientific_names) {
 
     # Simplify ITIS data.frame
     itis <- mutate(itis,
+                   # Taxon class
+                   class = retrieve_class(.data$hierarchySoFarWRanks),
                    # Accepted scientific name
-                   valid_sci_name = retrieve_sci_name(hierarchySoFarWRanks),
+                   valid_sci_name = retrieve_sci_name(.data$hierarchySoFarWRanks),
                    # Return most common common name in ITIS...and capitalize it
-                   itis_com_name = Cap(get_vernac(vernacular)),
+                   itis_com_name = Cap(get_vernac(.data$vernacular)),
                    # Get rank if no longer species after correcting TSN
-                   itis_taxon_rank = retrieve_rank(hierarchySoFarWRanks)) %>%
-      select(sci_name = nameWOInd, valid_sci_name, itis_com_name, itis_taxon_rank = rank)
+                   itis_taxon_rank = retrieve_rank(.data$hierarchySoFarWRanks)) %>%
+      select(sci_name = .data$nameWOInd, .data$valid_sci_name, .data$itis_com_name,
+             .data$class, .data$itis_taxon_rank)
 
-    # Retrieve common names of changed scientific names, if missing...
+    # Retrieve common names and class of changed scientific names, if missing...
     needs_com_name <- itis %>%
-      filter(!identical(sci_name, valid_sci_name),
-             !is.na(valid_sci_name),
-             is.na(itis_com_name)) %>%
-      pull(valid_sci_name) %>% unique()
+      filter(!identical(.data$sci_name, .data$valid_sci_name),
+             !is.na(.data$valid_sci_name),
+             is.na(.data$itis_com_name)) %>%
+      pull(.data$valid_sci_name) %>% unique()
 
     # Again splitting, if necessary, to keep API happy
     if (length(needs_com_name) > 100) {
@@ -81,24 +84,28 @@ get_itis <- function(scientific_names) {
         tmp_cn <- solrium::solr_search(q = sci_query,
                                        fl = c('nameWOInd', 'vernacular'),
                                        # allow room for multiple returned matches
-                                       rows = length(tmp_cn) + 20)
-
-        # Add *missing* vernacular if not present..
-        if (!("vernacular" %in% colnames(tmp_cn))) tmp_cn$vernacular <- NA_character_
-
-        tmp_cn <- tmp_cn %>%
-          group_by(nameWOInd) %>%
+                                       rows = length(tmp_cn) + 20,
+                                       callopts = httr::timeout(timeout)) %>%
+          # Ensure vernacular column is present..
+          bind_rows(data.frame(vernacular = NA_character_,
+                               stringsAsFactors = FALSE)) %>%
+          group_by(.data$nameWOInd) %>%
           slice(1) %>% ungroup() %>%
-          mutate(itis_com_name = Cap(get_vernac(vernacular))) %>%
-          select(valid_sci_name = nameWOInd, itis_com_name) %>%
-          filter(!is.na(itis_com_name))
+          mutate(itis_com_name = Cap(get_vernac(.data$vernacular)),
+                 # Taxon class
+                 class = retrieve_class(.data$hierarchySoFarWRanks)) %>%
+          select(valid_sci_name = .data$nameWOInd, .data$itis_com_name,
+                 .data$class) %>%
+          filter(!is.na(.data$itis_com_name))
       })
+
       fix_cn <- bind_rows(fix_cn)
       keep <- anti_join(itis, fix_cn, by = "valid_sci_name")
       update <- semi_join(itis, fix_cn, by = "valid_sci_name") %>%
         left_join(fix_cn, by = "valid_sci_name") %>%
-        mutate(itis_com_name = itis_com_name.y) %>%
-        select(sci_name, valid_sci_name, itis_com_name, itis_taxon_rank)
+        mutate(itis_com_name = .data$itis_com_name.y) %>%
+        select(.data$sci_name, .data$valid_sci_name,
+               .data$itis_com_name, .data$class, .data$itis_taxon_rank)
       itis <- bind_rows(keep, update)
     }
 

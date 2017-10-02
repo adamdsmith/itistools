@@ -5,4 +5,5 @@
 #' @docType package
 #' @name itistools
 #' @import dplyr
+#' @importFrom rlang .data
 NULL
