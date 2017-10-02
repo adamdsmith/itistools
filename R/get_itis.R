@@ -1,6 +1,9 @@
 #' Retrieve specific taxon information from ITIS based on scientific name query
 #'
 #' @param scientific_names string of scientific names with which to query ITIS
+#' @param timeout integer indicating time, in seconds, to allow for HTTP requests to
+#'  process. Default is 30 seconds, which should be more than adequate for most
+#'  requests.
 #'
 #' @return tibble containing the queried scientific name, the valid ITIS scientific
 #'  name if the taxon is of 'Species' rank, the ITIS common name (if present), and
@@ -15,7 +18,7 @@
 #' get_itis(sn)
 #' }
 
-get_itis <- function(scientific_names) {
+get_itis <- function(scientific_names, timeout = 20L) {
 
   scientific_names <- unique(scientific_names)
 
@@ -31,7 +34,9 @@ get_itis <- function(scientific_names) {
     tmp_sn <- solrium::solr_search(q = sci_query,
                                  fl = c('tsn', 'nameWOInd', 'usage', 'rank', 'acceptedTSN',
                                         'vernacular', 'hierarchySoFarWRanks'),
-                                 rows = length(tmp_sn) + 20) # allow room for multiple returned matches
+                                 # allow room for multiple returned matches
+                                 rows = length(tmp_sn) + 20,
+                                 callopts = httr::timeout(timeout))
     if (nrow(tmp_sn) > 0) {
       tmp_sn <- tmp_sn %>%
         group_by(.data$nameWOInd) %>%

@@ -4,10 +4,14 @@
 \alias{get_itis}
 \title{Retrieve specific taxon information from ITIS based on scientific name query}
 \usage{
-get_itis(scientific_names)
+get_itis(scientific_names, timeout = 20L)
 }
 \arguments{
 \item{scientific_names}{string of scientific names with which to query ITIS}
+
+\item{timeout}{integer indicating time, in seconds, to allow for HTTP requests to
+process. Default is 30 seconds, which should be more than adequate for most
+requests.}
 }
 \value{
 tibble containing the queried scientific name, the valid ITIS scientific
