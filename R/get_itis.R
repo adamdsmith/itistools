@@ -23,14 +23,27 @@ get_itis <- function(scientific_names, timeout = 20L) {
   scientific_names <- unique(scientific_names)
 
   # Have to split lengthy requests so API can handle it
-  if (length(scientific_names) > 100) {
+  if (length(scientific_names) > 100)
     group_sn <- cut(seq_along(scientific_names), ceiling(length(scientific_names)/100), labels = FALSE)
-  } else group_sn <- rep(1, length(scientific_names))
+  else
+    group_sn <- rep(1, length(scientific_names))
 
   itis <- lapply(unique(group_sn), function(i) {
     tmp_sn <- scientific_names[which(group_sn == i)]
     sci_query <- paste0('nameWOInd:(', paste(shQuote(tmp_sn), collapse = " "), ')')
-    invisible(solrium::solr_connect("http://services.itis.gov/", verbose = FALSE))
+
+    for (j in 1:3) { # Try up to 3 times to set up SOLR connection
+      con <- try(solrium::solr_connect("http://services.itis.gov/",
+                                       verbose = FALSE),
+                 silent = TRUE)
+      if (!inherits(con, "error") || j == 3) break
+      Sys.sleep(stats::runif(1, 5, 10))
+    }
+
+    if (inherits(con, "error")) {
+      stop("ITIS connection failed.")
+    }
+
     tmp_sn <- solrium::solr_search(q = sci_query,
                                  fl = c('tsn', 'nameWOInd', 'usage', 'rank', 'acceptedTSN',
                                         'vernacular', 'hierarchySoFarWRanks'),
@@ -53,8 +66,9 @@ get_itis <- function(scientific_names, timeout = 20L) {
     # Save unmatched scientific names to add in later
     unmatched <- scientific_names[which(!(scientific_names %in% itis$nameWOInd))]
 
-    # Add *missing* vernacular if not present..
-    if (!("vernacular" %in% colnames(itis))) itis$vernacular <- NA_character_
+    # Ensure vernacular column is present..
+    itis <- bind_rows(itis, data.frame(vernacular = NA_character_,
+                                       stringsAsFactors = FALSE))
 
     # Simplify ITIS data.frame
     itis <- mutate(itis,
@@ -77,17 +91,30 @@ get_itis <- function(scientific_names, timeout = 20L) {
       pull(.data$valid_sci_name) %>% unique()
 
     # Again splitting, if necessary, to keep API happy
-    if (length(needs_com_name) > 100) {
+    if (length(needs_com_name) > 100)
       group_cn <- cut(seq_along(needs_com_name), ceiling(length(needs_com_name)/100), labels = FALSE)
-    } else group_cn <- rep(1, length(needs_com_name))
+    else
+      group_cn <- rep(1, length(needs_com_name))
 
     if (length(group_cn) > 0) {
       fix_cn <- lapply(unique(group_cn), function(i) {
+
+        for (j in 1:3) { # Try up to 3 times to set up SOLR connection
+          con <- try(solrium::solr_connect("http://services.itis.gov/",
+                                           verbose = FALSE),
+                     silent = TRUE)
+          if (!inherits(con, "error") || j == 3) break
+          Sys.sleep(stats::runif(1, 5, 10))
+        }
+
+        if (inherits(con, "error")) {
+          stop("ITIS connection failed.")
+        }
+
         tmp_cn <- needs_com_name[which(group_cn == i)]
         sci_query <- paste0('nameWOInd:(', paste(shQuote(tmp_cn), collapse = " "), ')')
-        invisible(solrium::solr_connect("http://services.itis.gov/", verbose = FALSE))
         tmp_cn <- solrium::solr_search(q = sci_query,
-                                       fl = c('nameWOInd', 'vernacular'),
+                                       fl = c('nameWOInd', 'vernacular', 'hierarchySoFarWRanks'),
                                        # allow room for multiple returned matches
                                        rows = length(tmp_cn) + 20,
                                        callopts = httr::timeout(timeout)) %>%
