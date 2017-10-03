@@ -28,21 +28,22 @@ get_itis <- function(scientific_names, timeout = 20L) {
   else
     group_sn <- rep(1, length(scientific_names))
 
+  for (i in 1:3) { # Try up to 3 times to set up SOLR connection
+    con <- try(solrium::solr_connect("http://services.itis.gov/",
+                                     verbose = FALSE),
+               silent = TRUE)
+    if (!inherits(con, "error") || i == 3) break
+    Sys.sleep(stats::runif(1, 5, 10))
+  }
+
+  if (inherits(con, "error")) {
+    stop("ITIS connection failed.")
+  }
+
   itis <- lapply(unique(group_sn), function(i) {
     tmp_sn <- scientific_names[which(group_sn == i)]
     sci_query <- paste0('nameWOInd:(', paste(shQuote(tmp_sn), collapse = " "), ')')
 
-    for (j in 1:3) { # Try up to 3 times to set up SOLR connection
-      con <- try(solrium::solr_connect("http://services.itis.gov/",
-                                       verbose = FALSE),
-                 silent = TRUE)
-      if (!inherits(con, "error") || j == 3) break
-      Sys.sleep(stats::runif(1, 5, 10))
-    }
-
-    if (inherits(con, "error")) {
-      stop("ITIS connection failed.")
-    }
 
     tmp_sn <- solrium::solr_search(q = sci_query,
                                  fl = c('tsn', 'nameWOInd', 'usage', 'rank', 'acceptedTSN',
@@ -98,18 +99,6 @@ get_itis <- function(scientific_names, timeout = 20L) {
 
     if (length(group_cn) > 0) {
       fix_cn <- lapply(unique(group_cn), function(i) {
-
-        for (j in 1:3) { # Try up to 3 times to set up SOLR connection
-          con <- try(solrium::solr_connect("http://services.itis.gov/",
-                                           verbose = FALSE),
-                     silent = TRUE)
-          if (!inherits(con, "error") || j == 3) break
-          Sys.sleep(stats::runif(1, 5, 10))
-        }
-
-        if (inherits(con, "error")) {
-          stop("ITIS connection failed.")
-        }
 
         tmp_cn <- needs_com_name[which(group_cn == i)]
         sci_query <- paste0('nameWOInd:(', paste(shQuote(tmp_cn), collapse = " "), ')')
