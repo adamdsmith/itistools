@@ -21,11 +21,14 @@
 get_itis <- function(scientific_names, timeout = 20L) {
 
   scientific_names <- Cap(unique(scientific_names), "first")
+  save_sn <- scientific_names
+  # Remove blanks
+  scientific_names <- scientific_names[!is_missing(scientific_names)]
 
   # Have to split lengthy requests so API can handle it
-  if (length(scientific_names) > 100)
+  if (length(scientific_names) > 50)
     group_sn <- cut(seq_along(scientific_names),
-                    ceiling(length(scientific_names)/100), labels = FALSE)
+                    ceiling(length(scientific_names)/50), labels = FALSE)
   else
     group_sn <- rep(1, length(scientific_names))
 
@@ -69,7 +72,7 @@ get_itis <- function(scientific_names, timeout = 20L) {
   if (nrow(itis) > 0) {
 
     # Save unmatched scientific names to add in later
-    unmatched <- scientific_names[which(!(scientific_names %in% itis$nameWOInd))]
+    unmatched <- save_sn[which(!(save_sn %in% itis$nameWOInd))]
 
     # Ensure vernacular column is present..
     itis <- bind_rows(itis, data.frame(vernacular = character(0),
@@ -96,8 +99,8 @@ get_itis <- function(scientific_names, timeout = 20L) {
       pull(.data$valid_sci_name) %>% unique()
 
     # Again splitting, if necessary, to keep API happy
-    if (length(needs_com_name) > 100)
-      group_cn <- cut(seq_along(needs_com_name), ceiling(length(needs_com_name)/100), labels = FALSE)
+    if (length(needs_com_name) > 50)
+      group_cn <- cut(seq_along(needs_com_name), ceiling(length(needs_com_name)/50), labels = FALSE)
     else
       group_cn <- rep(1, length(needs_com_name))
 
