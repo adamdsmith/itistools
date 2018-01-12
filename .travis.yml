@@ -5,6 +5,9 @@ cran: http://cran.rstudio.com
 dist: trusty
 cache: packages
 
+r_packages:
+  - devtools
+
 r:
   - release
   - devel
