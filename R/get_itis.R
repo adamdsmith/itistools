@@ -20,18 +20,19 @@
 
 get_itis <- function(scientific_names, timeout = 20L) {
 
-  scientific_names <- unique(scientific_names)
+  scientific_names <- Cap(unique(scientific_names), "first")
 
   # Have to split lengthy requests so API can handle it
   if (length(scientific_names) > 100)
-    group_sn <- cut(seq_along(scientific_names), ceiling(length(scientific_names)/100), labels = FALSE)
+    group_sn <- cut(seq_along(scientific_names),
+                    ceiling(length(scientific_names)/100), labels = FALSE)
   else
     group_sn <- rep(1, length(scientific_names))
 
   for (i in 1:3) { # Try up to 3 times to set up SOLR connection
-    con <- try(solrium::solr_connect("http://services.itis.gov/",
-                                     verbose = FALSE),
-               silent = TRUE)
+    con <- try(solrium::SolrClient$new(host = "services.itis.gov",
+                                       scheme = "https",
+                                       port = NULL), silent = TRUE)
     if (!inherits(con, "error") || i == 3) break
     Sys.sleep(stats::runif(1, 5, 10))
   }
@@ -42,15 +43,18 @@ get_itis <- function(scientific_names, timeout = 20L) {
 
   itis <- lapply(unique(group_sn), function(i) {
     tmp_sn <- scientific_names[which(group_sn == i)]
-    sci_query <- paste0('nameWOInd:(', paste(shQuote(tmp_sn), collapse = " "), ')')
-
-
-    tmp_sn <- solrium::solr_search(q = sci_query,
-                                 fl = c('tsn', 'nameWOInd', 'usage', 'rank', 'acceptedTSN',
-                                        'vernacular', 'hierarchySoFarWRanks'),
-                                 # allow room for multiple returned matches
-                                 rows = length(tmp_sn) + 20,
-                                 callopts = httr::timeout(timeout))
+    # Encode for ITIS query
+    tmp_sn <- gsub(' ', '\\\\%20', tmp_sn)
+    sci_query <- paste0('nameWOInd:',
+                        paste(tmp_sn,
+                              collapse = utils::URLencode(" OR nameWOInd:")))
+    tmp_sn <- con$search(params = list(q = sci_query,
+                                       fl = c('tsn', 'nameWOInd', 'usage',
+                                              'rank', 'acceptedTSN',
+                                              'vernacular', 'hierarchySoFarWRanks')),
+                         # allow room for multiple returned matches
+                         rows = length(tmp_sn) + 20,
+                         callopts = list(timeout = timeout))
     if (nrow(tmp_sn) > 0) {
       tmp_sn <- tmp_sn %>%
         group_by(.data$nameWOInd) %>%
@@ -101,12 +105,17 @@ get_itis <- function(scientific_names, timeout = 20L) {
       fix_cn <- lapply(unique(group_cn), function(i) {
 
         tmp_cn <- needs_com_name[which(group_cn == i)]
-        sci_query <- paste0('nameWOInd:(', paste(shQuote(tmp_cn), collapse = " "), ')')
-        tmp_cn <- solrium::solr_search(q = sci_query,
-                                       fl = c('nameWOInd', 'vernacular', 'hierarchySoFarWRanks'),
-                                       # allow room for multiple returned matches
-                                       rows = length(tmp_cn) + 20,
-                                       callopts = httr::timeout(timeout)) %>%
+        # Encode for ITIS query
+        tmp_cn <- gsub(' ', '\\\\%20', tmp_cn)
+        sci_query <- paste0('nameWOInd:',
+                            paste(tmp_cn,
+                                  collapse = utils::URLencode(" OR nameWOInd:")))
+        tmp_cn <- con$search(params = list(q = sci_query,
+                                           fl = c('nameWOInd', 'vernacular',
+                                                  'hierarchySoFarWRanks')),
+                             # allow room for multiple returned matches
+                             rows = length(tmp_cn) + 20,
+                             callopts = list(timeout = timeout)) %>%
           # Ensure vernacular column is present..
           bind_rows(data.frame(vernacular = character(0),
                                stringsAsFactors = FALSE)) %>%
