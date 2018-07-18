@@ -21,6 +21,9 @@
 get_itis <- function(scientific_names, timeout = 20L) {
 
   scientific_names <- Cap(unique(scientific_names), "first")
+  # Drop parantheticals
+  scientific_names <- gsub(' \\(.*$', '', scientific_names)
+
   save_sn <- scientific_names
   # Remove blanks
   scientific_names <- scientific_names[!is_missing(scientific_names)]
