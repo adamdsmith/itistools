@@ -110,10 +110,8 @@ get_itis <- function(scientific_names, timeout = 20L) {
 
         tmp_cn <- needs_com_name[which(group_cn == i)]
         # Encode for ITIS query
-        tmp_cn <- gsub(' ', '\\\\%20', tmp_cn)
         sci_query <- paste0('nameWOInd:',
-                            paste(tmp_cn,
-                                  collapse = utils::URLencode(" OR nameWOInd:")))
+                            paste(gsub(" ", "\\\\ ", tmp_cn), collapse = " OR nameWOInd:"))
         tmp_cn <- con$search(params = list(q = sci_query,
                                            fl = c('nameWOInd', 'vernacular',
                                                   'hierarchySoFarWRanks')),
