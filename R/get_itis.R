@@ -18,7 +18,7 @@
 #' get_itis(sn)
 #' }
 
-get_itis <- function(scientific_names, timeout = 20L) {
+get_itis <- function(scientific_names, timeout = 30L) {
 
   scientific_names <- Cap(unique(scientific_names), "first")
   # Drop parantheticals
