@@ -80,12 +80,12 @@ get_itis <- function(scientific_names, timeout = 20L) {
     itis <- mutate(itis,
                    # Taxon class
                    class = retrieve_class(.data$hierarchySoFarWRanks),
+                   # Get rank of taxon
+                   itis_taxon_rank = retrieve_rank(.data$hierarchySoFarWRanks),
                    # Accepted scientific name
-                   valid_sci_name = retrieve_sci_name(.data$hierarchySoFarWRanks),
+                   valid_sci_name = retrieve_sci_name(.data$hierarchySoFarWRanks, itis_taxon_rank),
                    # Return most common common name in ITIS...and capitalize it
-                   itis_com_name = Cap(get_vernac(.data$vernacular)),
-                   # Get rank if no longer species after correcting TSN
-                   itis_taxon_rank = retrieve_rank(.data$hierarchySoFarWRanks)) %>%
+                   itis_com_name = Cap(get_vernac(.data$vernacular))) %>%
       select(sci_name = .data$nameWOInd, .data$valid_sci_name, .data$itis_com_name,
              .data$class, .data$itis_taxon_rank)
 

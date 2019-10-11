@@ -131,10 +131,14 @@ retrieve_rank <- function(string) {
 #' @return string of equal length to \code{string} returning the valid ITIS
 #'  scientific name, if present
 
-retrieve_sci_name <- function(string) {
-  ifelse(grepl("\\$Species:", string),
-       sub(".*Species: *(.*?) *\\$.*$", "\\1", string),
-       NA_character_)
+retrieve_sci_name <- function(string, rank) {
+  stopifnot(identical(length(string), length(rank)))
+  out <- sapply(seq_along(string), function(i) {
+    ifelse(grepl(paste0("\\$", rank[i], ":"), string[i]),
+           sub(paste0(".*", rank[i], ": *(.*?) *\\$.*$"), "\\1", string[i]),
+           NA_character_)
+  })
+  out
 }
 
 #' Extract taxonomic class
