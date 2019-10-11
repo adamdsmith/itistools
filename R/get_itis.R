@@ -22,8 +22,8 @@
 
 get_itis <- function(scientific_names, timeout = 20L) {
 
-  scientific_names <- prep_sci_names_for_itis(unique(scientific_names))
   save_sn <- scientific_names
+  scientific_names <- prep_sci_names_for_itis(unique(scientific_names))
 
   # Have to split lengthy requests so API can handle it
   if (length(scientific_names) > 50)
@@ -70,7 +70,7 @@ get_itis <- function(scientific_names, timeout = 20L) {
   if (nrow(itis) > 0) {
 
     # Save unmatched scientific names to add in later
-    unmatched <- save_sn[which(!(save_sn %in% itis$nameWOInd))]
+    unmatched <- save_sn[which(!(scientific_names %in% itis$nameWOInd))]
 
     # Ensure vernacular column is present..
     itis <- bind_rows(itis, data.frame(vernacular = character(0),
