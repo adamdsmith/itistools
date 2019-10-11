@@ -44,8 +44,7 @@ get_itis <- function(scientific_names, timeout = 20L) {
     stop("ITIS connection failed.")
   }
 
-  itis <- pbapply::pblapply(unique(group_sn), function(i) {
-    message(i)
+  itis <- lapply(unique(group_sn), function(i) {
     tmp_sn <- scientific_names[which(group_sn == i)]
     # Encode for ITIS query
     sci_query <- paste0('nameWOInd:',
@@ -104,7 +103,7 @@ get_itis <- function(scientific_names, timeout = 20L) {
       group_cn <- rep(1, length(needs_com_name))
 
     if (length(group_cn) > 0) {
-      fix_cn <- pbapply::pblapply(unique(group_cn), function(i) {
+      fix_cn <- lapply(unique(group_cn), function(i) {
 
         tmp_cn <- needs_com_name[which(group_cn == i)]
         # Encode for ITIS query
@@ -121,7 +120,7 @@ get_itis <- function(scientific_names, timeout = 20L) {
           # Ensure vernacular column is present..
           bind_rows(data.frame(vernacular = character(0),
                                stringsAsFactors = FALSE)) %>%
-          group_by(.data$nameWOInd) %>%
+          group_by(.data$nameWOInd) %>% arrange(vernacular) %>%
           slice(1) %>% ungroup() %>%
           mutate(
             # Get rank of taxon
@@ -140,8 +139,12 @@ get_itis <- function(scientific_names, timeout = 20L) {
       fix_cn <- bind_rows(fix_cn)
 
       # Now insert any updates into `itis`
-      if (nrow(fix_cn) > 0)
-        itis[match(fix_cn$valid_sci_name, itis$valid_sci_name), "itis_com_name"] <- fix_cn$itis_com_name
+      if (nrow(fix_cn) > 0) {
+        matches <- match(fix_cn$valid_sci_name, itis$valid_sci_name)
+        missing <- which(is.na(matches))
+        matches <- na.omit(matches)
+        itis[matches, "itis_com_name"] <- fix_cn$itis_com_name[-missing]
+      }
 
     }
 
