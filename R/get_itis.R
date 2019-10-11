@@ -44,7 +44,7 @@ get_itis <- function(scientific_names, timeout = 20L) {
     stop("ITIS connection failed.")
   }
 
-  itis <- lapply(unique(group_sn), function(i) {
+  itis <- pbapply::pblapply(unique(group_sn), function(i) {
     tmp_sn <- scientific_names[which(group_sn == i)]
     # Encode for ITIS query
     sci_query <- paste0('nameWOInd:',
@@ -103,7 +103,7 @@ get_itis <- function(scientific_names, timeout = 20L) {
       group_cn <- rep(1, length(needs_com_name))
 
     if (length(group_cn) > 0) {
-      fix_cn <- lapply(unique(group_cn), function(i) {
+      fix_cn <- pbapply::pblapply(unique(group_cn), function(i) {
 
         tmp_cn <- needs_com_name[which(group_cn == i)]
         # Encode for ITIS query
