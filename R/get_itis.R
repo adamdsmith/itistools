@@ -50,10 +50,8 @@ get_itis <- function(scientific_names, timeout = 20L) {
   itis <- lapply(unique(group_sn), function(i) {
     tmp_sn <- scientific_names[which(group_sn == i)]
     # Encode for ITIS query
-    tmp_sn <- gsub(' ', '\\\\%20', tmp_sn)
     sci_query <- paste0('nameWOInd:',
-                        paste(tmp_sn,
-                              collapse = utils::URLencode(" OR nameWOInd:")))
+                        paste(gsub(" ", "\\\\ ", tmp_sn), collapse = " OR nameWOInd:"))
     tmp_sn <- con$search(params = list(q = sci_query,
                                        fl = c('tsn', 'nameWOInd', 'usage',
                                               'rank', 'acceptedTSN',
