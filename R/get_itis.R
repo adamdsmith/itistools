@@ -13,8 +13,10 @@
 #' @examples
 #' \dontrun{
 #' sn <- c("Thryothorus ludovicianus", "Cardinalis cardinalis", "Bidens alba",
-#'         "Pachydiplax longipennis", "Cladonia evansii", "Ischnura hastata",
-#'         "Smilax bona-nox", "Plantae", "Malvaviscus", "Anaxyrus", "Gulo gulo")
+#'         "Acer rubrum var. rubrum", "Agave americana ssp. americana var. expansa",
+#'         "Lycopodium x habereri", "Pachydiplax longipennis", "Cladonia evansii",
+#'         "Ischnura hastata", "Smilax bona-nox", "Plantae", "Malvaviscus",
+#'         "Anaxyrus", "Gulo gulo", "X Amelasorbus jackii", "Gaillardia X grandiflora")
 #' get_itis(sn)
 #' }
 
