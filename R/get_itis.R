@@ -108,10 +108,10 @@ get_itis <- function(scientific_names, timeout = 20L) {
         tmp_cn <- needs_com_name[which(group_cn == i)]
         # Encode for ITIS query
         sci_query <- paste0('nameWOInd:',
-                            paste(gsub(" ", "\\\\ ", tmp_cn), collapse = " OR nameWOInd:"))
+                            paste(gsub(" ", "\\\\ ", prep_sci_names_for_itis(tmp_cn)),
+                                  collapse = " OR nameWOInd:"))
         tmp_cn <- con$search(params = list(q = sci_query,
-                                           fl = c('nameWOInd', 'vernacular',
-                                                  'hierarchySoFarWRanks')),
+                                           fl = c('nameWOInd', 'hierarchySoFarWRanks', 'vernacular')),
                              # allow room for multiple returned matches
                              rows = length(tmp_cn) + 20,
                              callopts = list(timeout = timeout))
@@ -122,40 +122,26 @@ get_itis <- function(scientific_names, timeout = 20L) {
                                stringsAsFactors = FALSE)) %>%
           group_by(.data$nameWOInd) %>%
           slice(1) %>% ungroup() %>%
-          mutate(itis_com_name = Cap(get_vernac(.data$vernacular)),
-                 # Taxon class
-                 class = retrieve_class(.data$hierarchySoFarWRanks)) %>%
-          select(valid_sci_name = .data$nameWOInd, .data$itis_com_name,
-                 .data$class) %>%
+          mutate(
+            # Get rank of taxon
+            itis_taxon_rank = retrieve_rank(.data$hierarchySoFarWRanks),
+            # Accepted scientific name
+            valid_sci_name = retrieve_sci_name(.data$hierarchySoFarWRanks, itis_taxon_rank),
+            itis_com_name = Cap(get_vernac(.data$vernacular))) %>%
+          select(.data$valid_sci_name, .data$itis_com_name) %>%
           filter(!is.na(.data$itis_com_name))
         } else {
           tibble(valid_sci_name = character(0),
-                 itis_com_name = character(0),
-                 class = character(0))
+                 itis_com_name = character(0))
         }
       })
 
       fix_cn <- bind_rows(fix_cn)
 
-      # Handle valid scientific names that for various reasons failed to retrieve from ITIS
-      # Typically due to hybrid name formatting (e.g., Gaillardia X grandiflora)
-      # TODO: Fix this?
-      failed_valid_sn <- needs_com_name[!needs_com_name %in% fix_cn$valid_sci_name]
-      if (length(failed_valid_sn) > 0) {
-        failed_valid_sn <- itis %>%
-          filter(valid_sci_name %in% failed_valid_sn) %>%
-          select(valid_sci_name, itis_com_name, class)
-        fix_cn <- bind_rows(fix_cn, failed_valid_sn)
-      }
+      # Now insert any updates into `itis`
+      if (nrow(fix_cn) > 0)
+        itis[match(fix_cn$valid_sci_name, itis$valid_sci_name), "itis_com_name"] <- fix_cn$itis_com_name
 
-      keep <- anti_join(itis, fix_cn, by = "valid_sci_name")
-      update <- semi_join(itis, fix_cn, by = "valid_sci_name") %>%
-        left_join(fix_cn, by = "valid_sci_name") %>%
-        select(.data$sci_name, .data$valid_sci_name,
-               itis_com_name = .data$itis_com_name.y,
-               class = .data$class.y,
-               .data$itis_taxon_rank)
-      itis <- bind_rows(keep, update)
     }
 
     # If necessary, add in unmatched records
