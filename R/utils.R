@@ -54,6 +54,32 @@ is_missing <- function(string) {
   is.na(string) | nchar(string) == 0 | grepl("^ +$", string)
 }
 
+prep_sci_names_for_itis <- function(sn_string) {
+  sn_miss <- "Undesignated|None|Unknown|Missing"
+  spec_epi_miss <- " sp$| sp.$| spp$| spp.$| species.*$"
+
+  # Trim any leading/trailing blank spaces
+  sn_string <- sn_string[!is_missing(sn_string)] %>% # Remove blanks
+    # Drop parantheticals
+    gsub(' \\(.*$', '', .) %>%
+    gsub("^\\s+|\\s+$", "", .) %>%
+    # Replace any "missing" values with actual missing values
+    gsub(sn_miss, NA_character_, .) %>%
+    # Replace generic species with blanks...
+    sub(spec_epi_miss, "", .) %>%
+    # Replace multiply sign for hybrids; assumes no other unicode slips in...
+    iconv("UTF-8", "ascii", sub = "X") %>%
+    # Drop any subspecies, variety, or leading hybrid indicators
+    gsub("ssp. |subspecies |var. |variety|^x |^X ", "", .) %>%
+    # Drop any 'in-between' hybrid indicators
+    gsub(" x | X ", " ", .) %>%   gsub(" x | X ", " ", .) %>%
+    # Replace periods (e.g., abbreviated scientific names)
+    gsub("\\.","", .) %>%
+    Cap("first")
+
+  return(sn_string)
+}
+
 #' Extract vernacular
 #'
 #' @param string string returned in 'vernacular' field of

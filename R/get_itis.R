@@ -20,13 +20,8 @@
 
 get_itis <- function(scientific_names, timeout = 20L) {
 
-  scientific_names <- Cap(unique(scientific_names), "first")
-  # Drop parantheticals
-  scientific_names <- gsub(' \\(.*$', '', scientific_names)
-
+  scientific_names <- prep_sci_names_for_itis(unique(scientific_names))
   save_sn <- scientific_names
-  # Remove blanks
-  scientific_names <- scientific_names[!is_missing(scientific_names)]
 
   # Have to split lengthy requests so API can handle it
   if (length(scientific_names) > 50)
